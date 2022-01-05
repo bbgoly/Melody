@@ -20,7 +20,7 @@ using SpotifyAPI.Web;
 
 namespace Melody.Commands
 {
-	[Group("play"), Aliases("p", "search"), RequireVoiceChannel]
+	[Group("play"), Aliases("p", "search", "query"), RequireVoiceChannel]
 	public sealed class TrackModule : BaseCommandModule
 	{
 		private SessionService SessionService { get; }
@@ -40,17 +40,16 @@ namespace Melody.Commands
 			if (botMember.VoiceState?.Channel is null || botMember.VoiceState?.Channel != ctx.Member.VoiceState.Channel) // ctx.Command.Name is "play" && ()
 			{
 				await this.SessionService.ConnectPlayerAsync(ctx);
-				await ctx.RespondAsync(ctx.BuildDefaultEmbedComponent(false)
-					.WithDescription("Joined " + ctx.Guild.CurrentMember.VoiceState.Channel.Mention + "!"));
+				await ctx.SendDefaultEmbedResponseAsync($"Joined {ctx.Guild.CurrentMember.VoiceState.Channel.Mention}!");
 			}
 			await base.BeforeExecutionAsync(ctx);
 		}
 
-		[GroupCommand, Command("youtube"), Aliases("yt")]
-		public async Task PlayYouTubeAsync(CommandContext ctx, [RemainingText] string searchParams)
+		[GroupCommand, Command("youtube"), Aliases("yt"), Priority(0)]
+		public async Task PlayYouTubeAsync(CommandContext ctx, [RemainingText] string query)
 		{
-			if (searchParams.Length == 0) return;
-			var ytResponse = await this.YoutubeService.SearchYoutube(searchParams);
+			if (query.Length == 0) return;
+			var ytResponse = await this.YoutubeService.SearchYoutube(query);
 			await this.InternalSearchResolver(ctx, ytResponse.Items.Select(item => new MelodySearchItem
 			{
 				Id = item.Id.Kind == "youtube#playlist" ? item.Id.PlaylistId : item.Id.VideoId,
@@ -66,7 +65,7 @@ namespace Melody.Commands
 			}).ToArray());
 		}
 
-		[GroupCommand]
+		[GroupCommand, Priority(1)]
 		public async Task PlayFromUriAsync(CommandContext ctx, Uri trackUri)
 		{
 			Console.WriteLine("received request from discord");
@@ -74,31 +73,30 @@ namespace Melody.Commands
 		}
 
 		[Command("spotify"), Aliases("sp", "spot")]
-		public async Task PlaySpotifyAsync(CommandContext ctx, [RemainingText] string searchParams)
+		public async Task PlaySpotifyAsync(CommandContext ctx, [RemainingText] string query)
 		{
-			if (searchParams.Length == 0) return;
+			if (query.Length == 0) return;
 			using var scope = this.ServiceScopeFactory.CreateScope();
 			var spotifyService = scope.ServiceProvider.GetService<SpotifyService>();
 			if (spotifyService is not null)
 			{
 				var spotifyClient = await spotifyService.BuildSpotifyClient();
-				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, searchParams));
+				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query));
 				
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
-					throw new TrackNotFoundException(searchParams, MelodySearchProvider.Spotify);
-				
-				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track =>
-					new MelodySearchItem
-					{
-						Id = track.Id,
-						Kind = "spotify#track",
-						Title = track.Name,
-						Authors = track.Artists.Select(artist => artist.Name).ToArray(),
-						AuthorIds = track.Artists.Select(artist => artist.Id).ToArray(),
-						ItemUrl = track.Uri,
-						DefaultThumbnail = track.Album.Images.ElementAt(0).Url,
-						SourceProvider = MelodySearchProvider.Spotify
-					}).ToArray());
+					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
+
+				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
+				{
+					Id = track.Id,
+					Kind = "spotify#track",
+					Title = track.Name,
+					Authors = track.Artists.Select(artist => artist.Name).ToArray(),
+					AuthorIds = track.Artists.Select(artist => artist.Id).ToArray(),
+					ItemUrl = track.Uri,
+					DefaultThumbnail = track.Album.Images.ElementAt(0).Url,
+					SourceProvider = MelodySearchProvider.Spotify
+				}).ToArray());
 			}
 		}
 		
@@ -106,7 +104,7 @@ namespace Melody.Commands
 		{
 			var promptSelectMessage = await searchItems.BuildMessageComponents(ctx.BuildDefaultEmbedComponent()
 				.WithTitle("Search Results Found!")
-				.WithDescription("Search results for your provided search parameters were found on " +
+				.WithDescription("Search results related to your provided search query were found on " +
 				                 searchItems[0].SourceProvider + "!\n\nSelect one or more of the options below.")
 				.WithThumbnail(searchItems[0].DefaultThumbnail)).SendAsync(ctx.Channel);
 

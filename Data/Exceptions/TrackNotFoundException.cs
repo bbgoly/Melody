@@ -7,7 +7,9 @@ namespace Melody.Data.Exceptions
 	{
 		public override string Message { get; }
 
-		public TrackNotFoundException(string searchParams, MelodySearchProvider searchProvider) => 
-			this.Message = $"No tracks were found on {searchProvider} for the search query provided:\n{searchParams}";
+		public TrackNotFoundException(string query, MelodySearchProvider searchProvider)
+		{
+			this.Message = $"No tracks were found on {searchProvider} for the search query provided:\n{query}";
+		}
 	}
 }
