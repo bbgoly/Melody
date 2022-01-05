@@ -73,8 +73,7 @@ namespace Melody.Services
 			this.GuildSessions = new ConcurrentDictionary<ulong, GuildSession>();
 			this.Discord.VoiceStateUpdated += Discord_VoiceStateUpdated;
 		}
-
-		// TODO: Remove GuildPlayer on voice channel leave
+		
 		private GuildSession GetOrCreateGuildSession(DiscordChannel channel)
 		{
 			ulong id = channel.Guild.Id;
@@ -115,6 +114,7 @@ namespace Melody.Services
 			else if (e.After is null)
 			{
 				// TODO: Remove from redis and update postgres
+				Console.WriteLine("lol");
 			}
 			return Task.CompletedTask;
 		}
