@@ -63,8 +63,8 @@ namespace Melody
 							Database = config.PostgresConfiguration.Database,
 							Username = config.PostgresConfiguration.Username,
 							Password = config.PostgresConfiguration.Password,
-							SslMode = config.PostgresConfiguration.UseEncryption ? SslMode.Require : SslMode.Disable,
-							TrustServerCertificate = config.PostgresConfiguration.TrustServerCertificate
+							//SslMode = config.PostgresConfiguration.UseEncryption ? SslMode.Require : SslMode.Disable,
+							//TrustServerCertificate = config.PostgresConfiguration.TrustServerCertificate
 						}.ConnectionString).LogTo(Console.WriteLine, LogLevel.Information))
 				.AddDbContext<PostgresClientService>()
 				.AddSingleton<RedisClientService>()

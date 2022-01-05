@@ -62,7 +62,7 @@ namespace Melody.Services
 		private IDbContextFactory<PostgresClientService> PostgresService { get; }
 
 		private GuildSession CachedGuildSession { get; set; }
-		private ConcurrentHashSet<GuildSession> GuildSessions { get; }
+		private ConcurrentDictionary<ulong, GuildSession> GuildSessions { get; }
 
 		public SessionService(DiscordClient client, LavalinkService lavalink, RedisClientService redis, IDbContextFactory<PostgresClientService> postgres)
 		{
@@ -70,7 +70,7 @@ namespace Melody.Services
 			this.RedisService = redis;
 			this.LavalinkService = lavalink;
 			this.PostgresService = postgres;
-			this.GuildSessions = new ConcurrentHashSet<GuildSession>();
+			this.GuildSessions = new ConcurrentDictionary<ulong, GuildSession>();
 			this.Discord.VoiceStateUpdated += Discord_VoiceStateUpdated;
 		}
 
@@ -78,20 +78,13 @@ namespace Melody.Services
 		private GuildSession GetOrCreateGuildSession(DiscordChannel channel)
 		{
 			ulong id = channel.Guild.Id;
-			// GuildSession guildSession = this.CachedGuildSession;
-			// if (guildSession?.GuildId != id)
-			// {
-			// 	guildSession = new GuildSession(channel.Guild.Id, this.LavalinkService);
-			// 	this.CachedGuildSession = guildSession;
-			// 	this.GuildSessions.Add(guildSession);
-			// }
-			// guildSession.SessionInfo.CommandChannel = channel;
-			Console.WriteLine("adding guild");
-			GuildSession guildSession = new GuildSession(channel.Guild.Id, this.LavalinkService);
-			this.GuildSessions.Add(guildSession);
-			Console.WriteLine("adding guild again");
-			this.GuildSessions.Add(new GuildSession(channel.Guild.Id, this.LavalinkService));
-			Environment.Exit(0);
+			GuildSession guildSession = this.CachedGuildSession;
+			if (guildSession is null || guildSession.GuildId != id)
+			{
+				guildSession = this.GuildSessions.GetOrAdd(id, new GuildSession(id, this.LavalinkService));
+				this.CachedGuildSession = guildSession;
+			}
+			guildSession.SessionInfo.CommandChannel = channel;
 			return guildSession;
 		}
 
@@ -135,22 +128,12 @@ namespace Melody.Services
 		public async Task DisconnectPlayerAsync(CommandContext ctx)
 		{
 			DiscordVoiceState voiceState = ctx.Guild.CurrentMember?.VoiceState;
-			if (voiceState is not null)
+			if (voiceState is not null && this.GuildSessions.TryRemove(ctx.Guild.Id, out GuildSession guildPlayer))
 			{
-				GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
-				if (this.GuildSessions.TryRemove(guildSession))
-				{
-					await guildSession.DisconnectPlayerAsync();
-					await ctx.RespondAsync($"Disconnected the player from {voiceState.Channel.Mention} {DiscordEmoji.FromName(ctx.Client, ":stop_button:")}");
-				}
+				await guildPlayer.DisconnectPlayerAsync();
+				await ctx.RespondAsync($"Disconnected the player from {voiceState.Channel.Mention} {DiscordEmoji.FromName(ctx.Client, ":stop_button:")}");
 			}
 		}
-		
-		// if (voiceState is not null && this.GuildSessions.TryRemove(ctx.Guild.Id, out GuildSession guildPlayer))
-		// {
-		// 	await guildPlayer.DisconnectPlayerAsync();
-		// 	await ctx.RespondAsync($"Disconnected the player from {voiceState.Channel.Mention} {DiscordEmoji.FromName(ctx.Client, ":stop_button:")}");
-		// }
 
 		public async Task<bool> AddTracks(CommandContext ctx, MelodySearchItem responseItem)
 		{

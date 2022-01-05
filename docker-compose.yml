@@ -1,0 +1,40 @@
+﻿version: "3.8"
+
+services:
+  bot:
+    build: .
+    image: melody
+    depends_on:
+      - postgres
+      - redis
+      - lavalink
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: melody
+      POSTGRES_PASSWORD: m_elbot
+      POSTGRES_DB: melody-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - melody-db:/var/lib/postgresql/data
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command:
+      - /usr/local/etc/redis/redis.conf
+  lavalink:
+    image: fredboat/lavalink:master
+    restart: always
+    ports:
+      - "2333:2333"
+    volumes:
+      - ./application.yml:/opt/Lavalink/application.yml
+
+volumes:
+  melody-db:
