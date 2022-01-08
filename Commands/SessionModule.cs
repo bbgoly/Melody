@@ -2,8 +2,10 @@
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using Melody.Data.Attributes;
 using Melody.Services;
+using Melody.Utilities;
 
 namespace Melody.Commands
 {
@@ -18,9 +20,20 @@ namespace Melody.Commands
 		}
 
 		[Command("disconnect"), Aliases("dc", "leave")]
-		public async Task DisconnectAsync(CommandContext ctx) => await this.SessionService.DisconnectPlayerAsync(ctx);
+		public async Task DisconnectPlayerAsync(CommandContext ctx)
+		{
+			DiscordVoiceState voiceState = ctx.Guild.CurrentMember?.VoiceState;
+			if (voiceState is not null)
+			{
+				await this.SessionService.DisconnectPlayerAsync(ctx.Guild);
+				await ctx.SendDefaultEmbedResponseAsync($"Disconnected the player from {voiceState.Channel.Mention} {DiscordEmoji.FromName(ctx.Client, ":stop_button:")}");
+			}
+		}
 
 		[Command("skip"), Aliases("s")]
-		public async Task SkipAsync(CommandContext ctx) => await this.SessionService.SkipTrackAsync(ctx);
+		public async Task SkipTrackAsync(CommandContext ctx)
+		{
+			
+		}
 	}
 }

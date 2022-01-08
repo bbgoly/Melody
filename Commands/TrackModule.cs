@@ -8,7 +8,6 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.Lavalink.EventArgs;
 using Melody.Data;
 using Melody.Data.Attributes;
 using Melody.Data.Enums;
@@ -110,25 +109,26 @@ namespace Melody.Commands
 
 			var interactivityExtension = ctx.Client.GetInteractivity();
 			var selectedTracks = await interactivityExtension.WaitForSelectAsync(promptSelectMessage, ctx.User, "selectTracks", null);
+			
+			await selectedTracks.Result.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
+			await selectedTracks.Result.Interaction.DeleteOriginalResponseAsync();
+			
 			if (selectedTracks.TimedOut || ctx.Guild.CurrentMember?.VoiceState?.Channel is null)
 			{
 				await ctx.SendDefaultEmbedResponseAsync("Track selection timed out, no tracks were added to queue.");
 				return;
 			}
 
-			await selectedTracks.Result.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
-			await selectedTracks.Result.Interaction.DeleteOriginalResponseAsync();
-
 			List<string> trackTitles = new List<string>(selectedTracks.Result.Values.Length);
 			foreach (string resultValue in selectedTracks.Result.Values)
 			{
 				int itemIndex = int.Parse(resultValue);
-				bool firstTrack = await this.SessionService.AddTracks(ctx, searchItems[itemIndex]);
+				bool firstTrack = await this.SessionService.AddTracksAsync(ctx, searchItems[itemIndex]);
 				if (!firstTrack) trackTitles.Add(searchItems[itemIndex].Title);
 			}
 
 			if (trackTitles.Count > 0)
-				await ctx.SendDefaultEmbedMessageAsync($"Added track(s) **\"{string.Join("\"**, **\"", trackTitles.Select(HttpUtility.HtmlDecode))}\"** to queue");
+				await ctx.Channel.SendDefaultEmbedMessageAsync($"Added track(s) **\"{string.Join("\"**, **\"", trackTitles.Select(HttpUtility.HtmlDecode))}\"** to queue");
 		}
 	}
 }

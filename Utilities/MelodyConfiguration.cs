@@ -34,7 +34,6 @@ namespace Melody.Utilities
 		[JsonPropertyName("hostname")] public string Hostname { get; set; }
 		[JsonPropertyName("password")] public string Password { get; set; }
 		[JsonPropertyName("port")] public int Port { get; set; }
-		[JsonPropertyName("ssl")] public bool UseEncryption { get; set; }
 	}
 
 	public sealed class MelodyPostgresConfiguration
@@ -44,8 +43,6 @@ namespace Melody.Utilities
 		[JsonPropertyName("database")] public string Database { get; set; }
 		[JsonPropertyName("username")] public string Username { get; set; }
 		[JsonPropertyName("password")] public string Password { get; set; }
-		[JsonPropertyName("ssl")] public bool UseEncryption { get; set; }
-		[JsonPropertyName("trust_certificate")] public bool TrustServerCertificate { get; set; }
 	}
 
 	public sealed class MelodyYoutubeConfiguration

@@ -24,31 +24,29 @@ namespace Melody.Data
 			this.GuildId = guildId;
 			this.SessionInfo = new GuildSessionInfo();
 			this.LavalinkService = lavalinkService;
-			Console.WriteLine("Constructed GuildPlayer for: " + guildId);
 		}
 
 		public async Task ConnectPlayerAsync(DiscordChannel channel)
 		{
-			Console.WriteLine("now here");
 			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.Channel != channel) await this.DisconnectPlayerAsync(false);
 			if (this.LavalinkPlayer is null || !this.LavalinkPlayer.IsConnected)
 			{
-				Console.WriteLine("try connecting");
 				this.LavalinkPlayer = await this.LavalinkService.LavalinkNode.ConnectAsync(channel);
-				Console.WriteLine("connected??");
 				this.LavalinkPlayer.PlaybackFinished += Lavalink_PlaybackFinished;
 				this.LavalinkPlayer.TrackException += Lavalink_TrackException;
-				Console.WriteLine("worked???????");
 			}
 		}
 
 		public async Task DisconnectPlayerAsync(bool shouldDestroy = true)
 		{
-			if (shouldDestroy) await this.ClearTracks();
 			await this.LavalinkPlayer.DisconnectAsync(shouldDestroy);
-			this.LavalinkPlayer.PlaybackFinished -= this.Lavalink_PlaybackFinished;
-			this.LavalinkPlayer.TrackException -= this.Lavalink_TrackException;
-			this.LavalinkPlayer = null;
+			if (shouldDestroy)
+			{
+				await this.ClearTracksAsync();
+				this.LavalinkPlayer.PlaybackFinished -= this.Lavalink_PlaybackFinished;
+				this.LavalinkPlayer.TrackException -= this.Lavalink_TrackException;
+				this.LavalinkPlayer = null;
+			}
 		}
 		
 		private async Task PlayNextTrackAsync()
@@ -102,11 +100,9 @@ namespace Melody.Data
 			}
 		}
 		
-		public async Task ClearTracks()
+		public async Task ClearTracksAsync()
 		{
 			lock (_lock) this.SessionInfo.SessionQueue.Clear();
-			Console.WriteLine(this.LavalinkPlayer is null);
-			Console.WriteLine(this.SessionInfo is null);
 			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.IsConnected && this.SessionInfo.CurrentlyPlaying)
 			{
 				this.SessionInfo.CurrentTrack = null;
