@@ -58,7 +58,7 @@ namespace Melody.Services
 		public async Task<bool> AddTracksAsync(CommandContext ctx, MelodySearchItem responseItem)
 		{
 			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
-			LavalinkLoadResult lavalinkResult = await this.GetRestTracksAsync(responseItem.ItemUrl);
+			LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(responseItem.ItemUrl);
 			bool isQueueEmpty = guildSession.SessionInfo.SessionQueue.Count == 0;
 			switch (responseItem.SourceProvider)
 			{
@@ -75,30 +75,25 @@ namespace Melody.Services
 			return isQueueEmpty;
 		}
 
-		public async Task PauseAsync(CommandContext ctx)
+		public async Task PauseAsync(DiscordChannel commandChannel)
 		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
+			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
 			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
-			{
 				await guildSession.PauseAsync();
-				await ctx.RespondAsync($"{DiscordEmoji.FromName(ctx.Client, ":pause_button:")} Paused the player!");
-			}
 		}
 	
-		public async Task ResumeAsync(CommandContext ctx)
+		public async Task ResumeAsync(DiscordChannel commandChannel)
 		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
+			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
 			if (!guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
-			{
 				await guildSession.ResumeAsync();
-				await ctx.RespondAsync($"{DiscordEmoji.FromName(ctx.Client, ":play_pause:")} Resumed the player!");
-			}
 		}
 
-		public async Task SkipTrackAsync(CommandContext ctx)
+		public async Task SkipTrackAsync(DiscordChannel commandChannel)
 		{
-			await this.GetOrCreateGuildSession(ctx.Channel).SkipAsync();
-			await ctx.RespondAsync("Skipped track!");
+			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
+			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
+				await guildSession.SkipAsync();
 		}
 	}
 }

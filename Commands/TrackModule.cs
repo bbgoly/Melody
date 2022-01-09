@@ -41,12 +41,21 @@ namespace Melody.Commands
 				await this.SessionService.ConnectPlayerAsync(ctx);
 				await ctx.SendDefaultEmbedResponseAsync($"Joined {ctx.Guild.CurrentMember.VoiceState.Channel.Mention}!");
 			}
+			Console.WriteLine(ctx.RawArgumentString.Length);
+			Console.WriteLine(ctx.RawArguments.Count);
+			if (ctx.RawArgumentString.Length == 0)
+			{
+				await this.SessionService.ResumeAsync(ctx.Channel);
+				await ctx.SendDefaultEmbedResponseAsync($"Resumed the player! {DiscordEmoji.FromName(ctx.Client, ":play_pause:")}");
+				return;
+			}
 			await base.BeforeExecutionAsync(ctx);
 		}
 
 		[GroupCommand, Command("youtube"), Aliases("yt"), Priority(0)]
 		public async Task PlayYouTubeAsync(CommandContext ctx, [RemainingText] string query)
 		{
+			Console.WriteLine("query has content");
 			if (query.Length == 0) return;
 			var ytResponse = await this.YoutubeService.SearchYoutube(query);
 			await this.InternalSearchResolver(ctx, ytResponse.Items.Select(item => new MelodySearchItem
@@ -68,7 +77,7 @@ namespace Melody.Commands
 		public async Task PlayFromUriAsync(CommandContext ctx, Uri trackUri)
 		{
 			Console.WriteLine("received request from discord");
-			await ctx.SendDefaultEmbedResponseAsync(trackUri.AbsoluteUri);
+			await ctx.SendDefaultEmbedResponseAsync(trackUri.AbsoluteUri + " uri");
 		}
 
 		[Command("spotify"), Aliases("sp", "spot")]
