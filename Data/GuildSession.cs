@@ -39,14 +39,11 @@ namespace Melody.Data
 
 		public async Task DisconnectPlayerAsync(bool shouldDestroy = true)
 		{
+			if (shouldDestroy) await this.ClearTracksAsync();
 			await this.LavalinkPlayer.DisconnectAsync(shouldDestroy);
-			if (shouldDestroy)
-			{
-				await this.ClearTracksAsync();
-				this.LavalinkPlayer.PlaybackFinished -= this.Lavalink_PlaybackFinished;
-				this.LavalinkPlayer.TrackException -= this.Lavalink_TrackException;
-				this.LavalinkPlayer = null;
-			}
+			this.LavalinkPlayer.PlaybackFinished -= this.Lavalink_PlaybackFinished;
+			this.LavalinkPlayer.TrackException -= this.Lavalink_TrackException;
+			this.LavalinkPlayer = null;
 		}
 		
 		private async Task PlayNextTrackAsync()

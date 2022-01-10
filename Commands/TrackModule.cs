@@ -41,13 +41,11 @@ namespace Melody.Commands
 				await this.SessionService.ConnectPlayerAsync(ctx);
 				await ctx.SendDefaultEmbedResponseAsync($"Joined {ctx.Guild.CurrentMember.VoiceState.Channel.Mention}!");
 			}
-			Console.WriteLine(ctx.RawArgumentString.Length);
-			Console.WriteLine(ctx.RawArguments.Count);
+			
 			if (ctx.RawArgumentString.Length == 0)
 			{
 				await this.SessionService.ResumeAsync(ctx.Channel);
 				await ctx.SendDefaultEmbedResponseAsync($"Resumed the player! {DiscordEmoji.FromName(ctx.Client, ":play_pause:")}");
-				return;
 			}
 			await base.BeforeExecutionAsync(ctx);
 		}
