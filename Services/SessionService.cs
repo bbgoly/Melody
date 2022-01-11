@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -7,6 +10,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using Melody.Data;
 using Melody.Data.Enums;
+using Melody.Utilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Melody.Services
@@ -55,24 +59,30 @@ namespace Melody.Services
 				await guildPlayer.DisconnectPlayerAsync();
 		}
 
-		public async Task<bool> AddTracksAsync(CommandContext ctx, MelodySearchItem responseItem)
+		public async Task AddTracksAsync(CommandContext ctx, MelodySearchItem responseItem)
 		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
-			LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(responseItem.ItemUrl);
-			bool isQueueEmpty = guildSession.SessionInfo.SessionQueue.Count == 0;
-			switch (responseItem.SourceProvider)
+			if (responseItem.SourceProvider is MelodySearchProvider.Spotify)
 			{
-				case MelodySearchProvider.YouTube:
-					await guildSession.AddTracks(lavalinkResult.Tracks);
-					break;
-				case MelodySearchProvider.Spotify:
-					break;
-				case MelodySearchProvider.SoundCloud:
-					break;
-				default:
-					throw new ArgumentOutOfRangeException(nameof(responseItem.SourceProvider), responseItem.SourceProvider, null);
+				await ctx.Channel.SendDefaultEmbedMessageAsync("Finding equivalent Spotify tracks on YouTube...");
+				Uri odesliUri = new Uri("https://api.song.link/v1-alpha.1/links?url=" + Uri.EscapeDataString(responseItem.ItemUrl) + "&platform=youtube&type=song");
+				HttpWebRequest request = WebRequest.CreateHttp(odesliUri);
+				request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+				
+				
+				using HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+				await using Stream responseStream = response.GetResponseStream();
+				using StreamReader streamReader = new StreamReader(responseStream);
+				string test = await streamReader.ReadToEndAsync();
+				await ctx.Channel.SendDefaultEmbedMessageAsync(test);
 			}
-			return isQueueEmpty;
+
+			LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(responseItem.ItemUrl);
+			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
+			await guildSession.AddTracks(lavalinkResult.Tracks);
+			if (lavalinkResult.LoadResultType == LavalinkLoadResultType.PlaylistLoaded)
+			{
+				
+			}
 		}
 
 		public async Task PauseAsync(DiscordChannel commandChannel)

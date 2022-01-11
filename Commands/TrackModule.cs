@@ -59,10 +59,11 @@ namespace Melody.Commands
 			await this.InternalSearchResolver(ctx, ytResponse.Items.Select(item => new MelodySearchItem
 			{
 				Id = item.Id.Kind == "youtube#playlist" ? item.Id.PlaylistId : item.Id.VideoId,
-				Kind = item.Id.Kind,
+				Kind = item.Id.Kind == "youtube#playlist" ? "playlist" : "track",
 				Title = item.Snippet.Title,
-				Authors = new [] { item.Snippet.ChannelTitle },
-				AuthorIds = new [] { item.Snippet.ChannelId },
+				Author = item.Snippet.ChannelTitle,
+				AuthorId = item.Snippet.ChannelId,
+				AuthorUrl = "https://www.youtube.com/channel/" + item.Snippet.ChannelId,
 				ItemUrl = "https://www.youtube.com/" + (item.Id.Kind == "youtube#playlist"
 					? "playlist?list=" + item.Id.PlaylistId
 					: "watch?v=" + item.Id.VideoId),
@@ -81,13 +82,14 @@ namespace Melody.Commands
 		[Command("spotify"), Aliases("sp", "spot")]
 		public async Task PlaySpotifyAsync(CommandContext ctx, [RemainingText] string query)
 		{
+			Console.WriteLine("spotify command received query");
 			if (query.Length == 0) return;
 			using var scope = this.ServiceScopeFactory.CreateScope();
 			var spotifyService = scope.ServiceProvider.GetService<SpotifyService>();
 			if (spotifyService is not null)
 			{
 				var spotifyClient = await spotifyService.BuildSpotifyClient();
-				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query));
+				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)); // | SearchRequest.Types.Playlist
 				
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
 					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
@@ -95,11 +97,13 @@ namespace Melody.Commands
 				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
 				{
 					Id = track.Id,
-					Kind = "spotify#track",
+					Kind = "track",
 					Title = track.Name,
-					Authors = track.Artists.Select(artist => artist.Name).ToArray(),
-					AuthorIds = track.Artists.Select(artist => artist.Id).ToArray(),
+					Author = track.Artists[0].Name,
+					AuthorId = track.Artists[0].Id,
+					AuthorUrl = "https://open.spotify.com/artist/" + track.Artists[0].Id,
 					ItemUrl = track.Uri,
+					ItemDuration = TimeSpan.FromSeconds((double)track.DurationMs / 1000),
 					DefaultThumbnail = track.Album.Images.ElementAt(0).Url,
 					SourceProvider = MelodySearchProvider.Spotify
 				}).ToArray());
@@ -126,16 +130,18 @@ namespace Melody.Commands
 				return;
 			}
 
-			List<string> trackTitles = new List<string>(selectedTracks.Result.Values.Length);
-			foreach (string resultValue in selectedTracks.Result.Values)
+			var queuedTracks = ctx.BuildDefaultEmbedComponent()
+				.WithTitle("Tracks Added")
+				.WithDescription("Added the following track(s) to the queue (displays up to five tracks)")
+				.WithThumbnail(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail);
+			string[] selectedValues = selectedTracks.Result.Values;
+			for (int i = 0; i < selectedValues.Length; i++)
 			{
-				int itemIndex = int.Parse(resultValue);
-				bool firstTrack = await this.SessionService.AddTracksAsync(ctx, searchItems[itemIndex]);
-				if (!firstTrack) trackTitles.Add(searchItems[itemIndex].Title);
+				MelodySearchItem searchItem = searchItems[int.Parse(selectedValues[i])];
+				if (i < 5) queuedTracks.AddField(Formatter.Bold(searchItem.Title), $"by [{Formatter.Bold(searchItem.Author)}]({searchItem.AuthorId})");
+				await this.SessionService.AddTracksAsync(ctx, searchItem);
 			}
-
-			if (trackTitles.Count > 0)
-				await ctx.Channel.SendDefaultEmbedMessageAsync($"Added track(s) **\"{string.Join("\"**, **\"", trackTitles.Select(HttpUtility.HtmlDecode))}\"** to queue");
+			await ctx.Channel.SendMessageAsync(queuedTracks);
 		}
 	}
 }
