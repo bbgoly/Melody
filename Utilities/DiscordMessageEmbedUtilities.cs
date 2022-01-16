@@ -11,7 +11,7 @@ namespace Melody.Utilities
 		
 		public static DiscordEmbedBuilder BuildDefaultEmbedComponent(this CommandContext ctx) =>
 			InternalDefaultEmbedBuilder(ctx.Guild.CurrentMember)
-				.WithFooter("Requested by " + ctx.User.Username, ctx.Member.GuildAvatarUrl)
+				.WithFooter($"Requested by {ctx.User.Username}#{ctx.User.Discriminator}", ctx.Member.AvatarUrl)
 				.WithTimestamp(DateTimeOffset.Now);
 
 		public static async Task<DiscordMessage> SendDefaultEmbedResponseAsync(this CommandContext ctx, string content) =>

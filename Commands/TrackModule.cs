@@ -88,12 +88,14 @@ namespace Melody.Commands
 			var spotifyService = scope.ServiceProvider.GetService<SpotifyService>();
 			if (spotifyService is not null)
 			{
+				Console.WriteLine("bruh");
 				var spotifyClient = await spotifyService.BuildSpotifyClient();
 				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)); // | SearchRequest.Types.Playlist
-				
+				Console.WriteLine("what");
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
 					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
-
+				
+				Console.WriteLine("works?");
 				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
 				{
 					Id = track.Id,
@@ -112,15 +114,19 @@ namespace Melody.Commands
 		
 		private async Task InternalSearchResolver(CommandContext ctx, MelodySearchItem[] searchItems)
 		{
+			Console.WriteLine("hello?");
+			Console.WriteLine(searchItems[0]);
+			Console.WriteLine(searchItems[0].SourceProvider);
+			Console.WriteLine(searchItems[0].DefaultThumbnail);
 			var promptSelectMessage = await searchItems.BuildMessageComponents(ctx.BuildDefaultEmbedComponent()
 				.WithTitle("Search Results Found!")
 				.WithDescription("Search results related to your provided search query were found on " +
 				                 searchItems[0].SourceProvider + "!\n\nSelect one or more of the options below.")
 				.WithThumbnail(searchItems[0].DefaultThumbnail)).SendAsync(ctx.Channel);
-
+			
 			var interactivityExtension = ctx.Client.GetInteractivity();
 			var selectedTracks = await interactivityExtension.WaitForSelectAsync(promptSelectMessage, ctx.User, "selectTracks", null);
-			
+			Console.WriteLine("interact");
 			await selectedTracks.Result.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
 			await selectedTracks.Result.Interaction.DeleteOriginalResponseAsync();
 			
@@ -131,8 +137,8 @@ namespace Melody.Commands
 			}
 
 			var queuedTracks = ctx.BuildDefaultEmbedComponent()
-				.WithTitle("Tracks Added")
-				.WithDescription("Added the following track(s) to the queue (displays up to five tracks)")
+				.WithTitle("Tracks Added to Queue")
+				//.WithImageUrl(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail)
 				.WithThumbnail(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail);
 			string[] selectedValues = selectedTracks.Result.Values;
 			for (int i = 0; i < selectedValues.Length; i++)

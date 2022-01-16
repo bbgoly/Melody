@@ -37,7 +37,7 @@ namespace Melody.Services
 		private GuildSession GetOrCreateGuildSession(DiscordChannel channel)
 		{
 			ulong id = channel.Guild.Id;
-			GuildSession guildSession = this.CachedGuildSession;
+			GuildSession guildSession = this.CachedGuildSession; //probably remove cachedguildsession and just use getoradd if its cheap enough cuz not thread-safe and bad
 			if (guildSession is null || guildSession.GuildId != id)
 			{
 				guildSession = this.GuildSessions.GetOrAdd(id, new GuildSession(id, this.LavalinkService));
@@ -55,8 +55,11 @@ namespace Melody.Services
 
 		public async Task DisconnectPlayerAsync(DiscordGuild guild)
 		{
-			if (this.GuildSessions.TryRemove(guild.Id, out GuildSession guildPlayer))
-				await guildPlayer.DisconnectPlayerAsync();
+			if (this.GuildSessions.TryRemove(guild.Id, out GuildSession guildSession))
+			{
+				this.CachedGuildSession = null;
+				await guildSession.DisconnectPlayerAsync();
+			}
 		}
 
 		public async Task AddTracksAsync(CommandContext ctx, MelodySearchItem responseItem)
@@ -64,21 +67,26 @@ namespace Melody.Services
 			if (responseItem.SourceProvider is MelodySearchProvider.Spotify)
 			{
 				await ctx.Channel.SendDefaultEmbedMessageAsync("Finding equivalent Spotify tracks on YouTube...");
+				Console.WriteLine("bruh.");
 				Uri odesliUri = new Uri("https://api.song.link/v1-alpha.1/links?url=" + Uri.EscapeDataString(responseItem.ItemUrl) + "&platform=youtube&type=song");
 				HttpWebRequest request = WebRequest.CreateHttp(odesliUri);
 				request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-				
+				Console.WriteLine("bruh2.");
 				
 				using HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+				Console.WriteLine("res");
 				await using Stream responseStream = response.GetResponseStream();
+				Console.WriteLine("st");
 				using StreamReader streamReader = new StreamReader(responseStream);
+				Console.WriteLine("read");
 				string test = await streamReader.ReadToEndAsync();
+				Console.WriteLine(test);
 				await ctx.Channel.SendDefaultEmbedMessageAsync(test);
 			}
 
 			LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(responseItem.ItemUrl);
 			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
-			await guildSession.AddTracks(lavalinkResult.Tracks);
+			await guildSession.AddTracks(new []{lavalinkResult.Tracks.First()}); // TODO: fix this shit
 			if (lavalinkResult.LoadResultType == LavalinkLoadResultType.PlaylistLoaded)
 			{
 				

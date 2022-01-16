@@ -39,6 +39,7 @@ namespace Melody.Data
 
 		public async Task DisconnectPlayerAsync(bool shouldDestroy = true)
 		{
+			Console.WriteLine(shouldDestroy);
 			if (shouldDestroy) await this.ClearTracksAsync();
 			await this.LavalinkPlayer.DisconnectAsync(shouldDestroy);
 			this.LavalinkPlayer.PlaybackFinished -= this.Lavalink_PlaybackFinished;
@@ -100,12 +101,14 @@ namespace Melody.Data
 		public async Task ClearTracksAsync()
 		{
 			lock (_lock) this.SessionInfo.SessionQueue.Clear();
+			Console.WriteLine("cleared");
 			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.IsConnected && this.SessionInfo.CurrentlyPlaying)
 			{
 				this.SessionInfo.CurrentTrack = null;
 				this.SessionInfo.CurrentlyPlaying = false;
 				this.SessionInfo.PlaybackMode = PlaybackMode.None;
 				await this.LavalinkPlayer.StopAsync();
+				Console.WriteLine("ugh");
 			}
 		}
 

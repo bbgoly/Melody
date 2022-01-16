@@ -26,7 +26,7 @@ namespace Melody.Commands
 			if (voiceState is not null)
 			{
 				await this.SessionService.DisconnectPlayerAsync(ctx.Guild);
-				await ctx.SendDefaultEmbedResponseAsync($"Disconnected the player from {voiceState.Channel.Mention} {DiscordEmoji.FromName(ctx.Client, ":stop_button:")}");
+				await ctx.SendDefaultEmbedResponseAsync($"{DiscordEmoji.FromName(ctx.Client, ":stop_button:")} Disconnected the player from {voiceState.Channel.Mention}");
 			}
 		}
 

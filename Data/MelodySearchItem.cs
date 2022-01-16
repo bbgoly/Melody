@@ -15,12 +15,20 @@ namespace Melody.Data
 		public string Title
 		{
 			get => _title;
-			init => _title = HttpUtility.HtmlDecode(value);
+			init
+			{
+				Console.WriteLine("setting title thing");
+				_title = HttpUtility.HtmlDecode(value);
+			}
 		}
 		public string Author
 		{
 			get => _author;
-			init => _author = HttpUtility.HtmlDecode(value);
+			init
+			{
+				Console.WriteLine("setting author thing");
+				_author = HttpUtility.HtmlDecode(value);
+			}
 		}
 		public string AuthorId { get; init; }
 		public string AuthorUrl { get; init; }
@@ -41,8 +49,13 @@ namespace Melody.Data
 			for (int i = 0; i < items.Length; i++)
 			{
 				MelodySearchItem item = items[i];
-				selectComponentOptions.Add(new DiscordSelectComponentOption(item.Title, i.ToString(), $"{item.Author}\\u00B7{item.ItemDuration:h:mm:ss}"));
+				Console.WriteLine(item.Title);
+				Console.WriteLine("\u00B7");
+				Console.WriteLine(":/");
+				selectComponentOptions.Add(new DiscordSelectComponentOption(item.Title, i.ToString(), $"{item.Author}\u00B7"));//{item.ItemDuration:h:mm:ss}"));
+				Console.WriteLine("lol");
 				embedBuilder.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by [{Formatter.Bold(item.Author)}]({item.AuthorUrl}) on {Formatter.Bold(item.SourceProvider.ToString())}"); // MelodySearchProvider.SoundCloud => "https://soundcloud.com/"
+				Console.WriteLine("bruhhhhhhhh");
 			}
 
 			return new DiscordMessageBuilder()
