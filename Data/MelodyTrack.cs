@@ -46,6 +46,7 @@ namespace Melody.Data
 	public sealed class MelodyTrack
 	{
 		// TODO: Determine whether Track property is needed when a playlist exists
+		public string TrackUrl { get; init; }
 		public LavalinkTrack Track { get; init; }
 		public string DefaultThumbnail { get; init; }
 		public MelodyPlaylist? Playlist { get; init; }

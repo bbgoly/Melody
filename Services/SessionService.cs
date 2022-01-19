@@ -62,35 +62,60 @@ namespace Melody.Services
 			}
 		}
 
-		public async Task AddTracksAsync(CommandContext ctx, MelodySearchItem responseItem)
+		/* TODO: If only one item exists and queue is not empty (i.e. a track is currently playing), add it to the description
+		 * if more than one item exists add them to fields?
+		 * if playlist loaded, show how many tracks from playlist added [playlistName] (...numTracks)
+		 * Added Track(s) to Queue vs Track(s) Added to Queue
+		 * idfk man
+		 */
+		public async Task AddTracksAsync(CommandContext ctx, MelodySearchItem[] selectedItems)
 		{
-			if (responseItem.SourceProvider is MelodySearchProvider.Spotify)
+			var queuedTracks = ctx.BuildDefaultEmbedComponent()
+				.WithTitle("Track(s) Added to Queue")
+				.WithThumbnail(selectedItems[0].DefaultThumbnail);
+			Console.WriteLine("constructed");
+			MelodyTrack[] tracks = new MelodyTrack[selectedItems.Length];
+			for (int i = 0; i < selectedItems.Length; i++)
 			{
-				await ctx.Channel.SendDefaultEmbedMessageAsync("Finding equivalent Spotify tracks on YouTube...");
-				Console.WriteLine("bruh.");
-				Uri odesliUri = new Uri("https://api.song.link/v1-alpha.1/links?url=" + Uri.EscapeDataString(responseItem.ItemUrl) + "&platform=youtube&type=song");
-				HttpWebRequest request = WebRequest.CreateHttp(odesliUri);
-				request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-				Console.WriteLine("bruh2.");
-				
-				using HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
-				Console.WriteLine("res");
-				await using Stream responseStream = response.GetResponseStream();
-				Console.WriteLine("st");
-				using StreamReader streamReader = new StreamReader(responseStream);
-				Console.WriteLine("read");
-				string test = await streamReader.ReadToEndAsync();
-				Console.WriteLine(test);
-				await ctx.Channel.SendDefaultEmbedMessageAsync(test);
+				var item = selectedItems[i];
+				LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(new Uri(item.ItemUrl));
+				Console.WriteLine("found track(s)");
+				Console.WriteLine(lavalinkResult.LoadResultType);
+				Console.WriteLine(lavalinkResult.Tracks.First());
+				tracks[i] = lavalinkResult.LoadResultType switch
+				{
+					LavalinkLoadResultType.PlaylistLoaded => new MelodyTrack
+					{
+						Track = lavalinkResult.Tracks.ElementAt(lavalinkResult.PlaylistInfo.SelectedTrack),
+						LavalinkResultType = lavalinkResult.LoadResultType,
+						DefaultThumbnail = item.DefaultThumbnail,
+						SourceProvider = item.SourceProvider,
+						RequestingMember = ctx.Member,
+						Playlist = new MelodyPlaylist
+						{
+							PlaylistUrl = item.ItemUrl, PlaylistTracks = lavalinkResult.Tracks.ToArray()
+						},
+						TrackUrl = item.ItemUrl
+					},
+					LavalinkLoadResultType.TrackLoaded => new MelodyTrack
+					{
+						Track = lavalinkResult.Tracks.First(),
+						LavalinkResultType = lavalinkResult.LoadResultType,
+						DefaultThumbnail = item.DefaultThumbnail,
+						SourceProvider = item.SourceProvider,
+						RequestingMember = ctx.Member,
+						TrackUrl = item.ItemUrl
+					},
+					_ => throw new ArgumentOutOfRangeException()
+				};
+				queuedTracks.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by {Formatter.Bold(item.Author)} on **[{item.SourceProvider.ToString()}]({item.ItemUrl} \"{item.ItemUrl}\")**");
+				Console.WriteLine("added field for " + i);
 			}
-
-			LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(responseItem.ItemUrl);
+			await ctx.Channel.SendMessageAsync(queuedTracks);
+			
+			// TODO: Make playlists work
 			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
-			await guildSession.AddTracks(new []{lavalinkResult.Tracks.First()}); // TODO: fix this shit
-			if (lavalinkResult.LoadResultType == LavalinkLoadResultType.PlaylistLoaded)
-			{
-				
-			}
+			await guildSession.AddTracksAsync(tracks);
 		}
 
 		public async Task PauseAsync(DiscordChannel commandChannel)

@@ -7,6 +7,7 @@ using DSharpPlus.Lavalink;
 using DSharpPlus.Lavalink.EventArgs;
 using Melody.Data.Enums;
 using Melody.Services;
+using Melody.Utilities;
 
 namespace Melody.Data
 {
@@ -52,12 +53,16 @@ namespace Melody.Data
 			if (this.LavalinkPlayer?.Channel is null) await this.DisconnectPlayerAsync();
 			if (!this.SessionInfo.CurrentlyPlaying && this.SessionInfo.SessionQueue.Count > 0)
 			{
-				LavalinkTrack track = this.SessionInfo.SessionQueue[0];
-				this.SessionInfo.CurrentTrack = track;
+				MelodyTrack nextTrack = this.SessionInfo.SessionQueue[0];
+				this.SessionInfo.CurrentTrack = nextTrack;
 				this.SessionInfo.CurrentlyPlaying = true;
+				await this.LavalinkPlayer.PlayAsync(nextTrack.Track);
 
-				await this.LavalinkPlayer.PlayAsync(track);
-				await this.SessionInfo.CommandChannel.SendMessageAsync($"Now playing: {Formatter.Bold(track.Title)} by {Formatter.Bold(track.Author)}");
+				var nowPlayingEmbed = nextTrack.RequestingMember.BuildDefaultEmbedComponent(this.LavalinkPlayer.Guild.CurrentMember)
+					.WithTitle("Now Playing")
+					.WithDescription($"{Formatter.Bold(nextTrack.Track.Title)}\nby {Formatter.Bold(nextTrack.Track.Author)} on **[{nextTrack.SourceProvider}]({nextTrack.TrackUrl} \"{nextTrack.TrackUrl}\")**")
+					.WithThumbnail(nextTrack.DefaultThumbnail);
+				await this.SessionInfo.CommandChannel.SendMessageAsync(nowPlayingEmbed);
 				Console.WriteLine(this.LavalinkPlayer.CurrentState.PlaybackPosition);
 			}
 		}
@@ -78,7 +83,7 @@ namespace Melody.Data
 				$"A problem with the player occurred while playing {Formatter.InlineCode(Formatter.Sanitize(e.Track.Title))}:\n\n" +
 				Formatter.InlineCode($"{e.Error}\n\nTrack Information\nTrack title: {e.Track.Title}\nTrack author: {e.Track.Author}\nTrack position: {e.Track.Position}\nTrack length: {e.Track.Length}\nTrack uri: {e.Track.Uri}"));
 
-		public async Task AddTracks(IEnumerable<LavalinkTrack> tracks)
+		public async Task AddTracksAsync(MelodyTrack[] tracks)
 		{
 			lock (_lock) this.SessionInfo.SessionQueue.AddRange(tracks);
 			await this.PlayNextTrackAsync();

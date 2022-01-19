@@ -67,6 +67,7 @@ namespace Melody.Commands
 				ItemUrl = "https://www.youtube.com/" + (item.Id.Kind == "youtube#playlist"
 					? "playlist?list=" + item.Id.PlaylistId
 					: "watch?v=" + item.Id.VideoId),
+				ItemDuration = TimeSpan.Zero,
 				DefaultThumbnail = item.Snippet.Thumbnails.Medium.Url,
 				SourceProvider = MelodySearchProvider.YouTube
 			}).ToArray());
@@ -88,14 +89,14 @@ namespace Melody.Commands
 			var spotifyService = scope.ServiceProvider.GetService<SpotifyService>();
 			if (spotifyService is not null)
 			{
-				Console.WriteLine("bruh");
+				Console.WriteLine("spotifyservice is not null");
 				var spotifyClient = await spotifyService.BuildSpotifyClient();
 				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)); // | SearchRequest.Types.Playlist
-				Console.WriteLine("what");
+				Console.WriteLine("spotify search did not error");
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
 					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
 				
-				Console.WriteLine("works?");
+				Console.WriteLine("spotify command should be working, reached end");
 				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
 				{
 					Id = track.Id,
@@ -114,7 +115,7 @@ namespace Melody.Commands
 		
 		private async Task InternalSearchResolver(CommandContext ctx, MelodySearchItem[] searchItems)
 		{
-			Console.WriteLine("hello?");
+			Console.WriteLine("running internal search resolver, checking for valid first entry..");
 			Console.WriteLine(searchItems[0]);
 			Console.WriteLine(searchItems[0].SourceProvider);
 			Console.WriteLine(searchItems[0].DefaultThumbnail);
@@ -126,28 +127,36 @@ namespace Melody.Commands
 			
 			var interactivityExtension = ctx.Client.GetInteractivity();
 			var selectedTracks = await interactivityExtension.WaitForSelectAsync(promptSelectMessage, ctx.User, "selectTracks", null);
-			Console.WriteLine("interact");
-			await selectedTracks.Result.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
-			await selectedTracks.Result.Interaction.DeleteOriginalResponseAsync();
-			
+			Console.WriteLine("waiting for interactivity");
 			if (selectedTracks.TimedOut || ctx.Guild.CurrentMember?.VoiceState?.Channel is null)
 			{
-				await ctx.SendDefaultEmbedResponseAsync("Track selection timed out, no tracks were added to queue.");
+				await ctx.SendDefaultEmbedResponseAsync("Track selection timed out, no tracks were added to queue");
 				return;
 			}
-
-			var queuedTracks = ctx.BuildDefaultEmbedComponent()
-				.WithTitle("Tracks Added to Queue")
-				//.WithImageUrl(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail)
-				.WithThumbnail(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail);
-			string[] selectedValues = selectedTracks.Result.Values;
-			for (int i = 0; i < selectedValues.Length; i++)
+			await selectedTracks.Result.Interaction.CreateResponseAsync(InteractionResponseType.DeferredMessageUpdate);
+			await selectedTracks.Result.Interaction.DeleteOriginalResponseAsync();
+			Console.WriteLine("passed time out");
+			MelodySearchItem[] selectedItems = new MelodySearchItem[selectedTracks.Result.Values.Length];
+			for (int i = 0; i < selectedTracks.Result.Values.Length; i++)
 			{
-				MelodySearchItem searchItem = searchItems[int.Parse(selectedValues[i])];
-				if (i < 5) queuedTracks.AddField(Formatter.Bold(searchItem.Title), $"by [{Formatter.Bold(searchItem.Author)}]({searchItem.AuthorId})");
-				await this.SessionService.AddTracksAsync(ctx, searchItem);
+				int itemIndex = int.Parse(selectedTracks.Result.Values[i]);
+				selectedItems[i] = searchItems[itemIndex];
+				Console.WriteLine("Added " + selectedItems[i].Title);
 			}
-			await ctx.Channel.SendMessageAsync(queuedTracks);
+			Console.WriteLine("sent");
+			await this.SessionService.AddTracksAsync(ctx, selectedItems);
+			Console.WriteLine("done");
+			// var queuedTracks = ctx.BuildDefaultEmbedComponent()
+			// 	.WithTitle("Track(s) Added to Queue")
+			// 	.WithThumbnail(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail);
+			// string[] selectedValues = selectedTracks.Result.Values;
+			// for (int i = 0; i < selectedValues.Length; i++)
+			// {
+			// 	MelodySearchItem searchItem = searchItems[int.Parse(selectedValues[i])];
+			// 	if (i < 5) queuedTracks.AddField(Formatter.Bold(searchItem.Title), $"by [{Formatter.Bold(searchItem.Author)}]({searchItem.AuthorId})");
+			// 	await this.SessionService.AddTracksAsync(ctx, searchItem);
+			// }
+			// await ctx.Channel.SendMessageAsync(queuedTracks);
 		}
 	}
 }

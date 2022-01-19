@@ -9,18 +9,24 @@ namespace Melody.Utilities
 	{
 		private static readonly DiscordColor DefaultEmbedColor = new(126, 46, 60);
 		
+		// TODO: Only have Track(s) Added to Queue appear if queue is not empty or more than one tracks are added
 		public static DiscordEmbedBuilder BuildDefaultEmbedComponent(this CommandContext ctx) =>
-			InternalDefaultEmbedBuilder(ctx.Guild.CurrentMember)
+			BuildInternalDefaultEmbedBuilder(ctx.Guild.CurrentMember)
 				.WithFooter($"Requested by {ctx.User.Username}#{ctx.User.Discriminator}", ctx.Member.AvatarUrl)
 				.WithTimestamp(DateTimeOffset.Now);
 
+		public static DiscordEmbedBuilder BuildDefaultEmbedComponent(this DiscordMember member, DiscordMember bot) =>
+			BuildInternalDefaultEmbedBuilder(bot)
+				.WithFooter($"Requested by {member.DisplayName}#{member.Discriminator}", member.AvatarUrl)
+				.WithTimestamp(DateTimeOffset.Now);
+
 		public static async Task<DiscordMessage> SendDefaultEmbedResponseAsync(this CommandContext ctx, string content) =>
-			await ctx.RespondAsync(InternalDefaultEmbedBuilder(ctx.Guild.CurrentMember).WithDescription(content));
+			await ctx.RespondAsync(BuildInternalDefaultEmbedBuilder(ctx.Guild.CurrentMember).WithDescription(content));
 
 		public static async Task<DiscordMessage> SendDefaultEmbedMessageAsync(this DiscordChannel channel, string content) =>
-			await channel.SendMessageAsync(InternalDefaultEmbedBuilder(channel.Guild.CurrentMember).WithDescription(content));
+			await channel.SendMessageAsync(BuildInternalDefaultEmbedBuilder(channel.Guild.CurrentMember).WithDescription(content));
 
-		private static DiscordEmbedBuilder InternalDefaultEmbedBuilder(DiscordMember currentMember) =>
+		private static DiscordEmbedBuilder BuildInternalDefaultEmbedBuilder(DiscordMember currentMember) =>
 			new DiscordEmbedBuilder().WithColor(currentMember.Color.Value is 0
 				? DefaultEmbedColor
 				: currentMember.Color);

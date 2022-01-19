@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -28,5 +29,12 @@ namespace Melody.Commands
 		[Command("purge"), RequireOwner]
 		public async Task PurgeAsync(CommandContext ctx, int max) =>
 			await ctx.Channel.DeleteMessagesAsync(await ctx.Channel.GetMessagesAsync(max));
+
+		[Command("purgeBefore"), RequireOwner]
+		public async Task PurgeBeforeAsync(CommandContext ctx, ulong messageBeforeId, int max)
+		{
+			IReadOnlyList<DiscordMessage> messages = await ctx.Channel.GetMessagesBeforeAsync(messageBeforeId, max);
+			await ctx.Channel.DeleteMessagesAsync(messages);
+		}
 	}
 }

@@ -10,8 +10,8 @@ namespace Melody.Data
 		public int Volume { get; set; }
 		public bool CurrentlyPlaying { get; set; }
 		public PlaybackMode PlaybackMode { get; set; }
-		public LavalinkTrack CurrentTrack { get; set; }
-		public List<LavalinkTrack> SessionQueue { get; }
+		public MelodyTrack CurrentTrack { get; set; }
+		public List<MelodyTrack> SessionQueue { get; }
 		public DiscordChannel CommandChannel { get; set; }
 
 		public GuildSessionInfo(int volume = 100)
@@ -20,7 +20,7 @@ namespace Melody.Data
 			this.CurrentTrack = null;
 			this.CurrentlyPlaying = false;
 			this.PlaybackMode = PlaybackMode.None;
-			this.SessionQueue = new List<LavalinkTrack>();
+			this.SessionQueue = new List<MelodyTrack>();
 		}
 	}
 }
