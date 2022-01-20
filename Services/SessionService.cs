@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using Melody.Data;
-using Melody.Data.Enums;
 using Melody.Utilities;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,9 +67,6 @@ namespace Melody.Services
 		 */
 		public async Task AddTracksAsync(CommandContext ctx, MelodySearchItem[] selectedItems)
 		{
-			var queuedTracks = ctx.BuildDefaultEmbedComponent()
-				.WithTitle("Track(s) Added to Queue")
-				.WithThumbnail(selectedItems[0].DefaultThumbnail);
 			Console.WriteLine("constructed");
 			MelodyTrack[] tracks = new MelodyTrack[selectedItems.Length];
 			for (int i = 0; i < selectedItems.Length; i++)
@@ -81,7 +75,6 @@ namespace Melody.Services
 				LavalinkLoadResult lavalinkResult = await this.LavalinkService.LavalinkNode.Rest.GetTracksAsync(new Uri(item.ItemUrl));
 				Console.WriteLine("found track(s)");
 				Console.WriteLine(lavalinkResult.LoadResultType);
-				Console.WriteLine(lavalinkResult.Tracks.First());
 				tracks[i] = lavalinkResult.LoadResultType switch
 				{
 					LavalinkLoadResultType.PlaylistLoaded => new MelodyTrack
@@ -108,13 +101,18 @@ namespace Melody.Services
 					},
 					_ => throw new ArgumentOutOfRangeException()
 				};
-				queuedTracks.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by {Formatter.Bold(item.Author)} on **[{item.SourceProvider.ToString()}]({item.ItemUrl} \"{item.ItemUrl}\")**");
 				Console.WriteLine("added field for " + i);
 			}
-			await ctx.Channel.SendMessageAsync(queuedTracks);
 			
 			// TODO: Make playlists work
 			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
+			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null || selectedItems.Length > 1)
+			{
+				var queuedTracks = ctx.BuildDefaultEmbedComponent().WithTitle("Track(s) Added to Queue").WithThumbnail(selectedItems[0].DefaultThumbnail);
+				foreach (var melodyTrack in tracks)
+					queuedTracks.AddField(Formatter.Bold(melodyTrack.Track.Title), $"by {Formatter.Bold(melodyTrack.Track.Author)} on **[{melodyTrack.SourceProvider.ToString()}]({melodyTrack.TrackUrl} \"{melodyTrack.TrackUrl}\")**");
+				await ctx.Channel.SendMessageAsync(queuedTracks);
+			}
 			await guildSession.AddTracksAsync(tracks);
 		}
 

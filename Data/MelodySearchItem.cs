@@ -50,7 +50,7 @@ namespace Melody.Data
 			{
 				MelodySearchItem item = items[i];
 				selectComponentOptions.Add(new DiscordSelectComponentOption(item.Title, i.ToString(), item.ItemDuration.Equals(default) ? item.Author : $"{item.Author}\u00B7{item.ItemDuration:h:mm:ss}"));
-				embedBuilder.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by **[{item.Author}]({item.AuthorUrl})** on **[{item.SourceProvider.ToString()}]({item.ItemUrl})**"); // MelodySearchProvider.SoundCloud => "https://soundcloud.com/"
+				embedBuilder.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by **[{item.Author}]({item.AuthorUrl} \"{item.AuthorUrl}\")** on **[{item.SourceProvider.ToString()}]({item.ItemUrl} \"{item.ItemUrl}\")**");
 			}
 			
 			return new DiscordMessageBuilder()

@@ -36,7 +36,7 @@ namespace Melody.Commands
 		public override async Task BeforeExecutionAsync(CommandContext ctx)
 		{
 			DiscordMember botMember = ctx.Guild.CurrentMember;
-			if (botMember.VoiceState?.Channel is null || botMember.VoiceState?.Channel != ctx.Member.VoiceState.Channel) // ctx.Command.Name is "play" && ()
+			if (botMember.VoiceState?.Channel is null || botMember.VoiceState?.Channel != ctx.Member.VoiceState.Channel)
 			{
 				await this.SessionService.ConnectPlayerAsync(ctx);
 				await ctx.SendDefaultEmbedResponseAsync($"Joined {ctx.Guild.CurrentMember.VoiceState.Channel.Mention}!");
@@ -50,11 +50,19 @@ namespace Melody.Commands
 			await base.BeforeExecutionAsync(ctx);
 		}
 
+		[GroupCommand, Priority(1)]
+		public async Task PlayFromUriAsync(CommandContext ctx, Uri trackUri)
+		{
+			Console.WriteLine("received request from discord");
+			await ctx.SendDefaultEmbedResponseAsync(trackUri.AbsoluteUri + " uri");
+		}
+		
 		[GroupCommand, Command("youtube"), Aliases("yt"), Priority(0)]
 		public async Task PlayYouTubeAsync(CommandContext ctx, [RemainingText] string query)
 		{
-			Console.WriteLine("query has content");
+			Console.WriteLine("youtube command used");
 			if (query.Length == 0) return;
+			Console.WriteLine("query has content: " + query);
 			var ytResponse = await this.YoutubeService.SearchYoutube(query);
 			await this.InternalSearchResolver(ctx, ytResponse.Items.Select(item => new MelodySearchItem
 			{
@@ -68,23 +76,17 @@ namespace Melody.Commands
 					? "playlist?list=" + item.Id.PlaylistId
 					: "watch?v=" + item.Id.VideoId),
 				ItemDuration = TimeSpan.Zero,
-				DefaultThumbnail = item.Snippet.Thumbnails.Medium.Url,
+				DefaultThumbnail = item.Snippet.Thumbnails.Standard.Url,
 				SourceProvider = MelodySearchProvider.YouTube
 			}).ToArray());
-		}
-
-		[GroupCommand, Priority(1)]
-		public async Task PlayFromUriAsync(CommandContext ctx, Uri trackUri)
-		{
-			Console.WriteLine("received request from discord");
-			await ctx.SendDefaultEmbedResponseAsync(trackUri.AbsoluteUri + " uri");
 		}
 
 		[Command("spotify"), Aliases("sp", "spot")]
 		public async Task PlaySpotifyAsync(CommandContext ctx, [RemainingText] string query)
 		{
-			Console.WriteLine("spotify command received query");
+			Console.WriteLine("spotify command used");
 			if (query.Length == 0) return;
+			Console.WriteLine("query has content: " + query);
 			using var scope = this.ServiceScopeFactory.CreateScope();
 			var spotifyService = scope.ServiceProvider.GetService<SpotifyService>();
 			if (spotifyService is not null)
@@ -95,7 +97,8 @@ namespace Melody.Commands
 				Console.WriteLine("spotify search did not error");
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
 					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
-				
+				Console.Write("checking if image is 640x640: ");
+				Console.WriteLine(spotifyResponse.Tracks.Items[0].Album.Images.ElementAt(0).Height == 640);
 				Console.WriteLine("spotify command should be working, reached end");
 				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
 				{
@@ -111,6 +114,12 @@ namespace Melody.Commands
 					SourceProvider = MelodySearchProvider.Spotify
 				}).ToArray());
 			}
+		}
+
+		[Command("soundcloud"), Aliases("sc", "sound")]
+		public async Task PlaySoundCloudAsync(CommandContext ctx, [RemainingText] string query)
+		{
+			if (query.Length == 0) return;
 		}
 		
 		private async Task InternalSearchResolver(CommandContext ctx, MelodySearchItem[] searchItems)
@@ -146,17 +155,6 @@ namespace Melody.Commands
 			Console.WriteLine("sent");
 			await this.SessionService.AddTracksAsync(ctx, selectedItems);
 			Console.WriteLine("done");
-			// var queuedTracks = ctx.BuildDefaultEmbedComponent()
-			// 	.WithTitle("Track(s) Added to Queue")
-			// 	.WithThumbnail(searchItems[int.Parse(selectedTracks.Result.Values[0])].DefaultThumbnail);
-			// string[] selectedValues = selectedTracks.Result.Values;
-			// for (int i = 0; i < selectedValues.Length; i++)
-			// {
-			// 	MelodySearchItem searchItem = searchItems[int.Parse(selectedValues[i])];
-			// 	if (i < 5) queuedTracks.AddField(Formatter.Bold(searchItem.Title), $"by [{Formatter.Bold(searchItem.Author)}]({searchItem.AuthorId})");
-			// 	await this.SessionService.AddTracksAsync(ctx, searchItem);
-			// }
-			// await ctx.Channel.SendMessageAsync(queuedTracks);
 		}
 	}
 }

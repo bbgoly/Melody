@@ -29,9 +29,11 @@ namespace Melody.Data
 
 		public async Task ConnectPlayerAsync(DiscordChannel channel)
 		{
+			Console.WriteLine(this.LavalinkPlayer is not null && this.LavalinkPlayer.Channel != channel);
 			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.Channel != channel) await this.DisconnectPlayerAsync(false);
 			if (this.LavalinkPlayer is null || !this.LavalinkPlayer.IsConnected)
 			{
+				Console.WriteLine("connected");
 				this.LavalinkPlayer = await this.LavalinkService.LavalinkNode.ConnectAsync(channel);
 				this.LavalinkPlayer.PlaybackFinished += Lavalink_PlaybackFinished;
 				this.LavalinkPlayer.TrackException += Lavalink_TrackException;
@@ -57,13 +59,12 @@ namespace Melody.Data
 				this.SessionInfo.CurrentTrack = nextTrack;
 				this.SessionInfo.CurrentlyPlaying = true;
 				await this.LavalinkPlayer.PlayAsync(nextTrack.Track);
-
+				
 				var nowPlayingEmbed = nextTrack.RequestingMember.BuildDefaultEmbedComponent(this.LavalinkPlayer.Guild.CurrentMember)
 					.WithTitle("Now Playing")
 					.WithDescription($"{Formatter.Bold(nextTrack.Track.Title)}\nby {Formatter.Bold(nextTrack.Track.Author)} on **[{nextTrack.SourceProvider}]({nextTrack.TrackUrl} \"{nextTrack.TrackUrl}\")**")
 					.WithThumbnail(nextTrack.DefaultThumbnail);
 				await this.SessionInfo.CommandChannel.SendMessageAsync(nowPlayingEmbed);
-				Console.WriteLine(this.LavalinkPlayer.CurrentState.PlaybackPosition);
 			}
 		}
 		
@@ -72,9 +73,9 @@ namespace Melody.Data
 			this.SessionInfo.CurrentTrack = null;
 			this.SessionInfo.CurrentlyPlaying = false;
 			if (this.SessionInfo.SessionQueue.Count > 0 && this.SessionInfo.PlaybackMode is PlaybackMode.None or PlaybackMode.Shuffle)
-			{
 				lock (_lock) this.SessionInfo.SessionQueue.RemoveAt(0);
-			}
+			if (this.SessionInfo.SessionQueue.Count == 0)
+				await this.SessionInfo.CommandChannel.SendDefaultEmbedMessageAsync("There are no tracks left in queue, add some more!");
 			await this.PlayNextTrackAsync();
 		}
 

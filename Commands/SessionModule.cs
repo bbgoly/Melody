@@ -31,16 +31,24 @@ namespace Melody.Commands
 		}
 
 		[Command("pause"), Aliases("stop", "hold")]
-		public async Task PausePlayer(CommandContext ctx)
+		public async Task PausePlayerAsync(CommandContext ctx)
 		{
 			await this.SessionService.PauseAsync(ctx.Channel);
 			await ctx.SendDefaultEmbedResponseAsync($"{DiscordEmoji.FromName(ctx.Client, ":pause_button:")} Paused the player!");
 		}
 
+		[Command("resume"), Aliases("r", "continue")]
+		public async Task ResumePlayerAsync(CommandContext ctx)
+		{
+			await this.SessionService.ResumeAsync(ctx.Channel);
+			await ctx.SendDefaultEmbedResponseAsync("Resumed the player");
+		}
+		
 		[Command("skip"), Aliases("s")]
 		public async Task SkipTrackAsync(CommandContext ctx)
 		{
-			
+			await this.SessionService.SkipTrackAsync(ctx.Channel);
+			await ctx.SendDefaultEmbedResponseAsync("Skipped currently playing track");
 		}
 	}
 }
