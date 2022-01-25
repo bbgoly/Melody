@@ -44,7 +44,7 @@ namespace Melody.Commands
 			
 			if (ctx.RawArgumentString.Length == 0)
 			{
-				await this.SessionService.ResumeAsync(ctx.Channel);
+				//await this.SessionService.ResumeAsync(ctx.Channel);
 				await ctx.SendDefaultEmbedResponseAsync($"Resumed the player! {DiscordEmoji.FromName(ctx.Client, ":play_pause:")}");
 			}
 			await base.BeforeExecutionAsync(ctx);

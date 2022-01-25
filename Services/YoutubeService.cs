@@ -26,7 +26,7 @@ namespace Melody.Services
 			searchRequest.ETagAction = ETagAction.IfNoneMatch;
 			searchRequest.Q = searchTerm;
 			searchRequest.MaxResults = 5;
-			searchRequest.Fields = "items(snippet/title,snippet/channelTitle,snippet/channelId,snippet/thumbnails/standard/url,id/kind,id/playlistId,id/videoId)";
+			searchRequest.Fields = "items(snippet/title,snippet/channelTitle,snippet/channelId,snippet/thumbnails/medium/url,id/kind,id/playlistId,id/videoId)";
 			return await searchRequest.ExecuteAsync();
 		}
 

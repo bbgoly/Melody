@@ -17,10 +17,8 @@ namespace Melody.Services
 		private DiscordClient Discord { get; }
 		private LavalinkService LavalinkService { get; }
 		private RedisClientService RedisService { get; }
-		private IDbContextFactory<PostgresClientService> PostgresService { get; }
-
-		private GuildSession CachedGuildSession { get; set; }
 		private ConcurrentDictionary<ulong, GuildSession> GuildSessions { get; }
+		private IDbContextFactory<PostgresClientService> PostgresService { get; }
 
 		public SessionService(DiscordClient client, LavalinkService lavalink, RedisClientService redis, IDbContextFactory<PostgresClientService> postgres)
 		{
@@ -31,15 +29,10 @@ namespace Melody.Services
 			this.GuildSessions = new ConcurrentDictionary<ulong, GuildSession>();
 		}
 		
-		private GuildSession GetOrCreateGuildSession(DiscordChannel channel)
+		public GuildSession GetOrCreateGuildSession(DiscordChannel channel)
 		{
-			ulong id = channel.Guild.Id;
-			GuildSession guildSession = this.CachedGuildSession; //probably remove cachedguildsession and just use getoradd if its cheap enough cuz not thread-safe and bad
-			if (guildSession is null || guildSession.GuildId != id)
-			{
-				guildSession = this.GuildSessions.GetOrAdd(id, new GuildSession(id, this.LavalinkService));
-				this.CachedGuildSession = guildSession;
-			}
+			ulong guildId = channel.Guild.Id;
+			GuildSession guildSession = this.GuildSessions.GetOrAdd(guildId, new GuildSession(guildId, this.LavalinkService));
 			guildSession.SessionInfo.CommandChannel = channel;
 			return guildSession;
 		}
@@ -52,11 +45,8 @@ namespace Melody.Services
 
 		public async Task DisconnectPlayerAsync(DiscordGuild guild)
 		{
-			if (this.GuildSessions.TryRemove(guild.Id, out GuildSession guildSession))
-			{
-				this.CachedGuildSession = null;
+			if (this.GuildSessions.TryRemove(guild.Id, out var guildSession))
 				await guildSession.DisconnectPlayerAsync();
-			}
 		}
 
 		/* TODO: If only one item exists and queue is not empty (i.e. a track is currently playing), add it to the description
@@ -108,33 +98,12 @@ namespace Melody.Services
 			GuildSession guildSession = this.GetOrCreateGuildSession(ctx.Channel);
 			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null || selectedItems.Length > 1)
 			{
-				var queuedTracks = ctx.BuildDefaultEmbedComponent().WithTitle("Track(s) Added to Queue").WithThumbnail(selectedItems[0].DefaultThumbnail);
+				var queuedTracks = ctx.BuildDefaultEmbedComponent().WithTitle("Track(s) Added to Queue").WithImageUrl(selectedItems[0].DefaultThumbnail);
 				foreach (var melodyTrack in tracks)
 					queuedTracks.AddField(Formatter.Bold(melodyTrack.Track.Title), $"by {Formatter.Bold(melodyTrack.Track.Author)} on **[{melodyTrack.SourceProvider.ToString()}]({melodyTrack.TrackUrl} \"{melodyTrack.TrackUrl}\")**");
 				await ctx.Channel.SendMessageAsync(queuedTracks);
 			}
 			await guildSession.AddTracksAsync(tracks);
-		}
-
-		public async Task PauseAsync(DiscordChannel commandChannel)
-		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
-			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
-				await guildSession.PauseAsync();
-		}
-	
-		public async Task ResumeAsync(DiscordChannel commandChannel)
-		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
-			if (!guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
-				await guildSession.ResumeAsync();
-		}
-
-		public async Task SkipTrackAsync(DiscordChannel commandChannel)
-		{
-			GuildSession guildSession = this.GetOrCreateGuildSession(commandChannel);
-			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
-				await guildSession.SkipAsync();
 		}
 	}
 }

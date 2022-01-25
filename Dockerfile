@@ -5,8 +5,6 @@ FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
 WORKDIR /src
 COPY ["Melody.csproj", "./"]
 COPY ["NuGet.Config", "./"]
-COPY ["config.json", "./"]
-COPY ["application.yml", "./"]
 RUN dotnet restore
 COPY . .
 WORKDIR "/src/"
@@ -17,7 +15,7 @@ RUN dotnet publish "Melody.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-COPY config.json .
-COPY application.yml .
+COPY /bin/Debug/net5.0/config.json .
+COPY ./Lavalink/application.yml .
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Melody.dll"]

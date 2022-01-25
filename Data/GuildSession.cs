@@ -63,7 +63,7 @@ namespace Melody.Data
 				var nowPlayingEmbed = nextTrack.RequestingMember.BuildDefaultEmbedComponent(this.LavalinkPlayer.Guild.CurrentMember)
 					.WithTitle("Now Playing")
 					.WithDescription($"{Formatter.Bold(nextTrack.Track.Title)}\nby {Formatter.Bold(nextTrack.Track.Author)} on **[{nextTrack.SourceProvider}]({nextTrack.TrackUrl} \"{nextTrack.TrackUrl}\")**")
-					.WithThumbnail(nextTrack.DefaultThumbnail);
+					.WithImageUrl(nextTrack.DefaultThumbnail);
 				await this.SessionInfo.CommandChannel.SendMessageAsync(nowPlayingEmbed);
 			}
 		}

@@ -3,8 +3,5 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
-/Lavalink/[Ll]ogs/*
+/Lavalink
 .idea/
-config.json
-redis.conf
-application.yml

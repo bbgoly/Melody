@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using Melody.Data;
 using Melody.Data.Attributes;
 using Melody.Services;
 using Melody.Utilities;
@@ -19,8 +20,14 @@ namespace Melody.Commands
 			this.SessionService = sessionService;
 		}
 
+		public override async Task BeforeExecutionAsync(CommandContext ctx)
+		{
+			Console.WriteLine(ctx.RawArgumentString.Length);
+			await base.BeforeExecutionAsync(ctx);
+		}
+
 		[Command("disconnect"), Aliases("dc", "leave")]
-		public async Task DisconnectPlayerAsync(CommandContext ctx)
+		public async Task DisconnectSessionAsync(CommandContext ctx)
 		{
 			DiscordVoiceState voiceState = ctx.Guild.CurrentMember?.VoiceState;
 			if (voiceState is not null)
@@ -33,22 +40,34 @@ namespace Melody.Commands
 		[Command("pause"), Aliases("stop", "hold")]
 		public async Task PausePlayerAsync(CommandContext ctx)
 		{
-			await this.SessionService.PauseAsync(ctx.Channel);
-			await ctx.SendDefaultEmbedResponseAsync($"{DiscordEmoji.FromName(ctx.Client, ":pause_button:")} Paused the player!");
+			GuildSession guildSession = this.SessionService.GetOrCreateGuildSession(ctx.Channel);
+			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
+			{
+				await guildSession.PauseAsync();
+				await ctx.SendDefaultEmbedResponseAsync($"{DiscordEmoji.FromName(ctx.Client, ":pause_button:")} Paused the player!");
+			}
 		}
 
 		[Command("resume"), Aliases("r", "continue")]
 		public async Task ResumePlayerAsync(CommandContext ctx)
 		{
-			await this.SessionService.ResumeAsync(ctx.Channel);
-			await ctx.SendDefaultEmbedResponseAsync("Resumed the player");
+			GuildSession guildSession = this.SessionService.GetOrCreateGuildSession(ctx.Channel);
+			if (!guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
+			{
+				await guildSession.ResumeAsync();
+				await ctx.SendDefaultEmbedResponseAsync("Resumed the player");
+			}
 		}
 		
 		[Command("skip"), Aliases("s")]
 		public async Task SkipTrackAsync(CommandContext ctx)
 		{
-			await this.SessionService.SkipTrackAsync(ctx.Channel);
-			await ctx.SendDefaultEmbedResponseAsync("Skipped currently playing track");
+			GuildSession guildSession = this.SessionService.GetOrCreateGuildSession(ctx.Channel);
+			if (guildSession.SessionInfo.CurrentlyPlaying && guildSession.SessionInfo.CurrentTrack is not null)
+			{
+				await guildSession.SkipAsync();
+				await ctx.SendDefaultEmbedResponseAsync("Skipped currently playing track");
+			}
 		}
 	}
 }
