@@ -30,7 +30,7 @@ namespace Melody.Commands
 		public async Task PurgeAsync(CommandContext ctx, int max) =>
 			await ctx.Channel.DeleteMessagesAsync(await ctx.Channel.GetMessagesAsync(max));
 
-		[Command("purgeBefore"), RequireOwner]
+		[Command("purgeBefore"), Aliases("purgeB"), RequireOwner]
 		public async Task PurgeBeforeAsync(CommandContext ctx, ulong messageBeforeId, int max)
 		{
 			IReadOnlyList<DiscordMessage> messages = await ctx.Channel.GetMessagesBeforeAsync(messageBeforeId, max);

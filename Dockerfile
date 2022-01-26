@@ -15,7 +15,7 @@ RUN dotnet publish "Melody.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
-COPY /bin/Debug/net5.0/config.json .
+COPY /bin/Debug/net5.0/config.docker.json .
 COPY ./Lavalink/application.yml .
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Melody.dll"]

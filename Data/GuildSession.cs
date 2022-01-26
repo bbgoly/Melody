@@ -52,8 +52,13 @@ namespace Melody.Data
 		
 		private async Task PlayNextTrackAsync()
 		{
-			if (this.LavalinkPlayer?.Channel is null) await this.DisconnectPlayerAsync();
-			if (!this.SessionInfo.CurrentlyPlaying && this.SessionInfo.SessionQueue.Count > 0)
+			if (this.LavalinkPlayer?.Channel is null)
+			{
+				
+				await this.DisconnectPlayerAsync();
+			}
+			if (!this.SessionInfo.CurrentlyPlaying) await this.ResumeAsync();
+			if (this.SessionInfo.CurrentTrack is null && this.SessionInfo.SessionQueue.Count > 0)
 			{
 				MelodyTrack nextTrack = this.SessionInfo.SessionQueue[0];
 				this.SessionInfo.CurrentTrack = nextTrack;

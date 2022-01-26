@@ -22,7 +22,6 @@ namespace Melody.Commands
 
 		public override async Task BeforeExecutionAsync(CommandContext ctx)
 		{
-			Console.WriteLine(ctx.RawArgumentString.Length);
 			await base.BeforeExecutionAsync(ctx);
 		}
 

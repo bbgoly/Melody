@@ -76,7 +76,7 @@ namespace Melody.Commands
 					? "playlist?list=" + item.Id.PlaylistId
 					: "watch?v=" + item.Id.VideoId),
 				ItemDuration = TimeSpan.Zero,
-				DefaultThumbnail = item.Snippet.Thumbnails.Standard.Url,
+				DefaultThumbnail = item.Snippet.Thumbnails.Medium.Url,
 				SourceProvider = MelodySearchProvider.YouTube
 			}).ToArray());
 		}

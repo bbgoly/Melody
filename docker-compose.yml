@@ -29,7 +29,7 @@ services:
     command:
       - /usr/local/etc/redis/redis.conf
   lavalink:
-    image: fredboat/lavalink:master
+    image: fredboat/lavalink:dev
     restart: always
     ports:
       - "2333:2333"

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Melody.Utilities;
 
@@ -8,7 +9,9 @@ namespace Melody
 	{
 		private static async Task Main(string[] args)
 		{
-			var configuration = await MelodyConfigurationLoader.LoadConfigurationAsync(new FileInfo("config.json"));
+			bool runningInDockerContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+			var fileInfo = new FileInfo(runningInDockerContainer ? "config.docker.json" : "config.json");
+			var configuration = await MelodyConfigurationLoader.LoadConfigurationAsync(fileInfo);
 			await new Melody(configuration).StartAsync();
 		}
 	}

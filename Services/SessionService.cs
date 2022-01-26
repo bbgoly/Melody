@@ -7,6 +7,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using Melody.Data;
+using Melody.Data.Exceptions;
 using Melody.Utilities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ namespace Melody.Services
 		private DiscordClient Discord { get; }
 		private LavalinkService LavalinkService { get; }
 		private RedisClientService RedisService { get; }
+		private GuildSession CachedGuildSession { get; set; }
 		private ConcurrentDictionary<ulong, GuildSession> GuildSessions { get; }
 		private IDbContextFactory<PostgresClientService> PostgresService { get; }
 
@@ -32,11 +34,16 @@ namespace Melody.Services
 		public GuildSession GetOrCreateGuildSession(DiscordChannel channel)
 		{
 			ulong guildId = channel.Guild.Id;
-			GuildSession guildSession = this.GuildSessions.GetOrAdd(guildId, new GuildSession(guildId, this.LavalinkService));
+			var guildSession = this.CachedGuildSession;
+			if (guildSession is null || guildSession.GuildId != guildId)
+			{
+				guildSession = this.GuildSessions.GetOrAdd(guildId, new GuildSession(guildId, this.LavalinkService));
+				this.CachedGuildSession = guildSession;
+			}
 			guildSession.SessionInfo.CommandChannel = channel;
 			return guildSession;
 		}
-
+		
 		public async Task ConnectPlayerAsync(CommandContext ctx)
 		{
 			await this.GetOrCreateGuildSession(ctx.Channel).ConnectPlayerAsync(ctx.Member.VoiceState.Channel);
@@ -89,7 +96,7 @@ namespace Melody.Services
 						RequestingMember = ctx.Member,
 						TrackUrl = item.ItemUrl
 					},
-					_ => throw new ArgumentOutOfRangeException()
+					_ => throw new TrackNotFoundException(item.ItemUrl, item.SourceProvider)
 				};
 				Console.WriteLine("added field for " + i);
 			}
