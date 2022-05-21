@@ -44,7 +44,7 @@ namespace Melody.Commands
 			
 			if (ctx.RawArgumentString.Length == 0)
 			{
-				//await this.SessionService.ResumeAsync(ctx.Channel);
+				await this.SessionService.GetOrCreateGuildSession(ctx.Channel).ResumeAsync();
 				await ctx.SendDefaultEmbedResponseAsync($"Resumed the player! {DiscordEmoji.FromName(ctx.Client, ":play_pause:")}");
 			}
 			await base.BeforeExecutionAsync(ctx);
@@ -57,7 +57,7 @@ namespace Melody.Commands
 			await ctx.SendDefaultEmbedResponseAsync(trackUri.AbsoluteUri + " uri");
 		}
 		
-		[GroupCommand, Command("youtube"), Aliases("yt"), Priority(0)]
+		[GroupCommand, Command("youtube"), Aliases("yt", "-youtube", "-yt"), Priority(0)]
 		public async Task PlayYouTubeAsync(CommandContext ctx, [RemainingText] string query)
 		{
 			Console.WriteLine("youtube command used");
@@ -81,7 +81,7 @@ namespace Melody.Commands
 			}).ToArray());
 		}
 
-		[Command("spotify"), Aliases("sp", "spot")]
+		[Command("spotify"), Aliases("s", "sp", "spot", "-spotify", "-s", "-sp", "-spot")]
 		public async Task PlaySpotifyAsync(CommandContext ctx, [RemainingText] string query)
 		{
 			Console.WriteLine("spotify command used");
@@ -93,7 +93,12 @@ namespace Melody.Commands
 			{
 				Console.WriteLine("spotifyservice is not null");
 				var spotifyClient = await spotifyService.BuildSpotifyClient();
-				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)); // | SearchRequest.Types.Playlist
+				var spotifyResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, query)
+				{
+					Limit = 5,
+					Market = "US",
+					IncludeExternal = SearchRequest.IncludeExternals.Audio
+				}); // | SearchRequest.Types.Playlist
 				Console.WriteLine("spotify search did not error");
 				if (spotifyResponse.Tracks.Items is null || spotifyResponse.Tracks.Items.Count == 0)
 					throw new TrackNotFoundException(query, MelodySearchProvider.Spotify);
@@ -102,13 +107,13 @@ namespace Melody.Commands
 				Console.WriteLine("spotify command should be working, reached end");
 				await this.InternalSearchResolver(ctx, spotifyResponse.Tracks.Items.Select(track => new MelodySearchItem
 				{
-					Id = track.Id,
+					Id = track.ExternalIds["isrc"],
 					Kind = "track",
 					Title = track.Name,
 					Author = track.Artists[0].Name,
 					AuthorId = track.Artists[0].Id,
 					AuthorUrl = "https://open.spotify.com/artist/" + track.Artists[0].Id,
-					ItemUrl = track.Uri,
+					ItemUrl = track.ExternalUrls["spotify"],
 					ItemDuration = TimeSpan.FromSeconds((double)track.DurationMs / 1000),
 					DefaultThumbnail = track.Album.Images.ElementAt(0).Url,
 					SourceProvider = MelodySearchProvider.Spotify
@@ -116,7 +121,7 @@ namespace Melody.Commands
 			}
 		}
 
-		[Command("soundcloud"), Aliases("sc", "sound")]
+		[Command("soundcloud"), Aliases("sc", "sound", "-soundcloud", "-sc", "-sound")]
 		public async Task PlaySoundCloudAsync(CommandContext ctx, [RemainingText] string query)
 		{
 			if (query.Length == 0) return;
@@ -128,13 +133,18 @@ namespace Melody.Commands
 			Console.WriteLine(searchItems[0]);
 			Console.WriteLine(searchItems[0].SourceProvider);
 			Console.WriteLine(searchItems[0].DefaultThumbnail);
-			var promptSelectMessage = await searchItems.BuildMessageComponents(ctx.BuildDefaultEmbedComponent()
+			Console.WriteLine(searchItems[0].ItemUrl);
+			Console.WriteLine("wtf?");
+			var what = searchItems.BuildMessageComponents(ctx.BuildDefaultEmbedComponent()
 				.WithTitle("Search Results Found!")
 				.WithDescription("Search results related to your provided search query were found on " +
 				                 searchItems[0].SourceProvider + "!\n\nSelect one or more of the options below.")
-				.WithThumbnail(searchItems[0].DefaultThumbnail)).SendAsync(ctx.Channel);
-			
+				.WithThumbnail(searchItems[0].DefaultThumbnail));
+			Console.WriteLine(what);
+			var promptSelectMessage = await what.SendAsync(ctx.Channel);
+			Console.WriteLine("huh");
 			var interactivityExtension = ctx.Client.GetInteractivity();
+			Console.WriteLine("wtf");
 			var selectedTracks = await interactivityExtension.WaitForSelectAsync(promptSelectMessage, ctx.User, "selectTracks", null);
 			Console.WriteLine("waiting for interactivity");
 			if (selectedTracks.TimedOut || ctx.Guild.CurrentMember?.VoiceState?.Channel is null)

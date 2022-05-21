@@ -35,7 +35,7 @@ namespace Melody.Services
 		{
 			ulong guildId = channel.Guild.Id;
 			var guildSession = this.CachedGuildSession;
-			if (guildSession is null || guildSession.GuildId != guildId)
+			if (guildSession is null || guildSession.SessionInfo.GuildId != guildId)
 			{
 				guildSession = this.GuildSessions.GetOrAdd(guildId, new GuildSession(guildId, this.LavalinkService));
 				this.CachedGuildSession = guildSession;
@@ -53,7 +53,10 @@ namespace Melody.Services
 		public async Task DisconnectPlayerAsync(DiscordGuild guild)
 		{
 			if (this.GuildSessions.TryRemove(guild.Id, out var guildSession))
+			{
+				if (this.CachedGuildSession.SessionInfo.GuildId == guild.Id) this.CachedGuildSession = null;
 				await guildSession.DisconnectPlayerAsync();
+			}
 		}
 
 		/* TODO: If only one item exists and queue is not empty (i.e. a track is currently playing), add it to the description
@@ -83,9 +86,10 @@ namespace Melody.Services
 						RequestingMember = ctx.Member,
 						Playlist = new MelodyPlaylist
 						{
-							PlaylistUrl = item.ItemUrl, PlaylistTracks = lavalinkResult.Tracks.ToArray()
+							PlaylistTracks = lavalinkResult.Tracks.ToArray()
 						},
-						TrackUrl = item.ItemUrl
+						TrackUrl = item.ItemUrl,
+						AuthorUrl = item.AuthorUrl
 					},
 					LavalinkLoadResultType.TrackLoaded => new MelodyTrack
 					{
@@ -94,7 +98,8 @@ namespace Melody.Services
 						DefaultThumbnail = item.DefaultThumbnail,
 						SourceProvider = item.SourceProvider,
 						RequestingMember = ctx.Member,
-						TrackUrl = item.ItemUrl
+						TrackUrl = item.ItemUrl,
+						AuthorUrl = item.AuthorUrl
 					},
 					_ => throw new TrackNotFoundException(item.ItemUrl, item.SourceProvider)
 				};

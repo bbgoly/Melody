@@ -13,7 +13,6 @@ namespace Melody.Data
 {
 	public sealed class GuildSession
 	{
-		public ulong GuildId { get; }
 		public GuildSessionInfo SessionInfo { get; }
 		private LavalinkService LavalinkService { get; }
 		private LavalinkGuildConnection LavalinkPlayer { get; set; }
@@ -22,8 +21,7 @@ namespace Melody.Data
 		
 		public GuildSession(ulong guildId, LavalinkService lavalinkService)
 		{
-			this.GuildId = guildId;
-			this.SessionInfo = new GuildSessionInfo();
+			this.SessionInfo = new GuildSessionInfo(guildId);
 			this.LavalinkService = lavalinkService;
 		}
 
@@ -33,7 +31,6 @@ namespace Melody.Data
 			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.Channel != channel) await this.DisconnectPlayerAsync(false);
 			if (this.LavalinkPlayer is null || !this.LavalinkPlayer.IsConnected)
 			{
-				Console.WriteLine("connected");
 				this.LavalinkPlayer = await this.LavalinkService.LavalinkNode.ConnectAsync(channel);
 				this.LavalinkPlayer.PlaybackFinished += Lavalink_PlaybackFinished;
 				this.LavalinkPlayer.TrackException += Lavalink_TrackException;
@@ -54,15 +51,15 @@ namespace Melody.Data
 		{
 			if (this.LavalinkPlayer?.Channel is null)
 			{
-				
+				Console.WriteLine("\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"RARE SHIT\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"");
 				await this.DisconnectPlayerAsync();
 			}
-			if (!this.SessionInfo.CurrentlyPlaying) await this.ResumeAsync();
 			if (this.SessionInfo.CurrentTrack is null && this.SessionInfo.SessionQueue.Count > 0)
 			{
 				MelodyTrack nextTrack = this.SessionInfo.SessionQueue[0];
 				this.SessionInfo.CurrentTrack = nextTrack;
 				this.SessionInfo.CurrentlyPlaying = true;
+				nextTrack.TimeElapsed = DateTime.UtcNow;
 				await this.LavalinkPlayer.PlayAsync(nextTrack.Track);
 				
 				var nowPlayingEmbed = nextTrack.RequestingMember.BuildDefaultEmbedComponent(this.LavalinkPlayer.Guild.CurrentMember)
@@ -71,6 +68,11 @@ namespace Melody.Data
 					.WithImageUrl(nextTrack.DefaultThumbnail);
 				await this.SessionInfo.CommandChannel.SendMessageAsync(nowPlayingEmbed);
 			}
+
+			if (!this.SessionInfo.CurrentlyPlaying)
+			{
+				await this.ResumeAsync();
+			}
 		}
 		
 		private async Task Lavalink_PlaybackFinished(LavalinkGuildConnection sender, TrackFinishEventArgs e)
@@ -78,16 +80,17 @@ namespace Melody.Data
 			this.SessionInfo.CurrentTrack = null;
 			this.SessionInfo.CurrentlyPlaying = false;
 			if (this.SessionInfo.SessionQueue.Count > 0 && this.SessionInfo.PlaybackMode is PlaybackMode.None or PlaybackMode.Shuffle)
+			{
 				lock (_lock) this.SessionInfo.SessionQueue.RemoveAt(0);
-			if (this.SessionInfo.SessionQueue.Count == 0)
-				await this.SessionInfo.CommandChannel.SendDefaultEmbedMessageAsync("There are no tracks left in queue, add some more!");
+				if (this.SessionInfo.SessionQueue.Count == 0)
+					await this.SessionInfo.CommandChannel.SendDefaultEmbedMessageAsync("There are no tracks left in queue, add some more!");
+			}
 			await this.PlayNextTrackAsync();
 		}
 
 		private async Task Lavalink_TrackException(LavalinkGuildConnection sender, TrackExceptionEventArgs e)
-			=> await this.SessionInfo.CommandChannel.SendMessageAsync(
-				$"A problem with the player occurred while playing {Formatter.InlineCode(Formatter.Sanitize(e.Track.Title))}:\n\n" +
-				Formatter.InlineCode($"{e.Error}\n\nTrack Information\nTrack title: {e.Track.Title}\nTrack author: {e.Track.Author}\nTrack position: {e.Track.Position}\nTrack length: {e.Track.Length}\nTrack uri: {e.Track.Uri}"));
+			=> await this.SessionInfo.CommandChannel.SendMessageAsync($"A problem with the player occurred while playing {Formatter.InlineCode(e.Track.Title)}:\n\n"
+			                                                          + Formatter.InlineCode($"{e.Error}\n\nTrack Information\nTrack title: {e.Track.Title}\nTrack author: {e.Track.Author}\nTrack position: {e.Track.Position}\nTrack length: {e.Track.Length}\nTrack uri: {e.Track.Uri}"));
 
 		public async Task AddTracksAsync(MelodyTrack[] tracks)
 		{
@@ -97,15 +100,16 @@ namespace Melody.Data
 
 		public async Task RemoveTrack(int index)
 		{
-			if (index == 0)
+			if (index > 0)
 			{
-				if (this.SessionInfo.PlaybackMode is not PlaybackMode.None or PlaybackMode.Shuffle)
-					this.SessionInfo.SessionQueue.RemoveAt(0);
-				await this.LavalinkPlayer.StopAsync();
+				lock (_lock)
+				{
+					this.SessionInfo.SessionQueue.RemoveAt(index);
+				}
 			}
 			else
 			{
-				lock (_lock) this.SessionInfo.SessionQueue.RemoveAt(index);
+				await this.SkipAsync();
 			}
 		}
 		
@@ -131,8 +135,11 @@ namespace Melody.Data
 
 		public async Task ResumeAsync()
 		{
-			this.SessionInfo.CurrentlyPlaying = true;
-			await this.LavalinkPlayer.ResumeAsync();
+			if (this.LavalinkPlayer is not null && this.LavalinkPlayer.IsConnected)
+			{
+				this.SessionInfo.CurrentlyPlaying = true;
+				await this.LavalinkPlayer.ResumeAsync();	
+			}
 		}
 
 		public async Task<int> SetPlayerVolumeAsync(int volume)

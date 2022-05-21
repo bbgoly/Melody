@@ -34,7 +34,7 @@ namespace Melody
 			{
 				TokenType = TokenType.Bot,
 				Token = config.DiscordConfiguration.Token,
-				Intents = DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates
+				Intents = DiscordIntents.All//DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates | DiscordIntents.GuildMessageReactions
 			});
 			
 			this.Discord.GuildAvailable += this.Discord_GuildAvailable;

@@ -46,7 +46,10 @@ namespace Melody.Data
 	public sealed class MelodyTrack
 	{
 		// TODO: Determine whether Track property is needed when a playlist exists
+		public DateTime TimeElapsed { get; set; }
+		public TimeSpan Duration => DateTime.UtcNow - TimeElapsed;
 		public string TrackUrl { get; init; }
+		public string AuthorUrl { get; init; }
 		public LavalinkTrack Track { get; init; }
 		public string DefaultThumbnail { get; init; }
 		public MelodyPlaylist? Playlist { get; init; }

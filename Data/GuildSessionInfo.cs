@@ -1,5 +1,4 @@
-﻿using DSharpPlus.Lavalink;
-using DSharpPlus.Entities;
+﻿using DSharpPlus.Entities;
 using System.Collections.Generic;
 using Melody.Data.Enums;
 
@@ -7,6 +6,7 @@ namespace Melody.Data
 {
 	public class GuildSessionInfo
 	{
+		public ulong GuildId { get; }
 		public int Volume { get; set; }
 		public bool CurrentlyPlaying { get; set; }
 		public PlaybackMode PlaybackMode { get; set; }
@@ -14,9 +14,10 @@ namespace Melody.Data
 		public List<MelodyTrack> SessionQueue { get; }
 		public DiscordChannel CommandChannel { get; set; }
 
-		public GuildSessionInfo(int volume = 100)
+		public GuildSessionInfo(ulong guildId)
 		{
-			this.Volume = volume;
+			this.Volume = 100;
+			this.GuildId = guildId;
 			this.CurrentTrack = null;
 			this.CurrentlyPlaying = false;
 			this.PlaybackMode = PlaybackMode.None;

@@ -23,11 +23,11 @@ namespace Melody.Data
 		}
 		public string Author
 		{
-			get => _author;
+			get => this._author;
 			init
 			{
 				Console.WriteLine("setting author thing: " + value);
-				_author = HttpUtility.HtmlDecode(value);
+				this._author = HttpUtility.HtmlDecode(value);
 			}
 		}
 		public string AuthorId { get; init; }
@@ -49,10 +49,9 @@ namespace Melody.Data
 			for (int i = 0; i < items.Length; i++)
 			{
 				MelodySearchItem item = items[i];
-				selectComponentOptions.Add(new DiscordSelectComponentOption(item.Title, i.ToString(), item.ItemDuration.Equals(default) ? item.Author : $"{item.Author}\u00B7{item.ItemDuration:h:mm:ss}"));
+				selectComponentOptions.Add(new DiscordSelectComponentOption(item.Title, i.ToString(), item.ItemDuration.Equals(default) ? item.Author : $"{item.Author} \u00B7 {item.ItemDuration:h\\:mm\\:ss}"));
 				embedBuilder.AddField($"{i + 1}. {Formatter.Bold(item.Title)}", $"by **[{item.Author}]({item.AuthorUrl} \"{item.AuthorUrl}\")** on **[{item.SourceProvider.ToString()}]({item.ItemUrl} \"{item.ItemUrl}\")**");
 			}
-			
 			return new DiscordMessageBuilder()
 				.WithEmbed(embedBuilder)
 				.AddComponents(new DiscordSelectComponent("selectTracks", "Select a track", selectComponentOptions, false, 1, 5));
